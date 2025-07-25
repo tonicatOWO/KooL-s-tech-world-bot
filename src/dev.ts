@@ -12,7 +12,7 @@ config();
 // The following syntax should be used in the ECMAScript environment
 const importPattern = `${dirname(
   import.meta.url
-)}/{commands,embed}/**/*.{ts,js}`;
+)}/{commands,events}/**/*.{ts,js}`;
 
 /**
  * Import files

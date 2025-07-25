@@ -1,36 +1,46 @@
-## build runner
-FROM node:lts-alpine as build-runner
+FROM node:lts-alpine as deps-installer
 
-# Set temp directory
+RUN npm install -g pnpm
+
+WORKDIR /tmp/deps
+
+COPY package.json pnpm-lock.yaml ./
+RUN pnpm install --frozen-lockfile --prod
+
+FROM oven/bun:alpine as build-runner
+
 WORKDIR /tmp/app
 
-# Move package.json
-COPY package.json .
+COPY package.json pnpm-lock.yaml ./
 
-# Install dependencies
-RUN npm install
+RUN bun install --frozen-lockfile
 
-# Move source files
 COPY src ./src
-COPY tsconfig.json   .
+COPY tsconfig.json .
 
-# Build project
-RUN npm run build
+RUN bun run build
 
 ## production runner
 FROM node:lts-alpine as prod-runner
 
-# Set work directory
+RUN apk add --no-cache dumb-init && \
+    npm install -g pnpm
+
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S nextjs -u 1001
+
 WORKDIR /app
 
-# Copy package.json from build-runner
-COPY --from=build-runner /tmp/app/package.json /app/package.json
+COPY --from=build-runner /tmp/app/package.json ./
+COPY --from=build-runner /tmp/app/pnpm-lock.yaml ./
 
-# Install dependencies
-RUN npm install --omit=dev
+COPY --from=deps-installer /tmp/deps/node_modules ./node_modules
 
-# Move build files
-COPY --from=build-runner /tmp/app/build /app/build
+COPY --from=build-runner /tmp/app/build ./build
 
-# Start bot
-CMD [ "npm", "run", "start" ]
+RUN chown -R nextjs:nodejs /app
+USER nextjs
+
+ENTRYPOINT ["dumb-init", "--"]
+CMD ["pnpm", "start"]
+

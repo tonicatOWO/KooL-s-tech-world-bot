@@ -6,21 +6,35 @@ import {
   ActionRowBuilder,
   ButtonBuilder,
   ButtonStyle,
+  ThreadChannel,
 } from 'discord.js';
 
+import { PrismaClient } from '@prisma/client';
+const prisma = new PrismaClient();
+
 @Discord()
-export class Example {
-  @On()
-  threadCreate([thread]: [any]): void {
-    console.log(
-      'Thread created:',
-      thread.name,
-      'in channel:',
-      thread.parent?.name,
-      'by',
-      thread.ownerId
-    );
-  };
+export class SupportThreadManage {
+  @On({ event: 'threadCreate' })
+  async threadCreate([thread]: [ThreadChannel]): Promise<void> {
+    try {
+      const threadId: string = thread.id;
+      const ownerId: string =
+        thread.ownerId || thread.guild?.ownerId || 'system';
+
+      await prisma.threadStatus.create({
+        data: {
+          id: threadId,
+          ownerId,
+          lastActivity: new Date(),
+        },
+      });
+
+      console.log(`support thrad be created ${threadId}`);
+    } catch (error) {
+      console.error('support thread creating error：', error);
+    }
+  }
+
   @ButtonComponent({ id: 'hello' })
   async handler(interaction: ButtonInteraction): Promise<void> {
     await interaction.reply(':wave:');

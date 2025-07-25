@@ -2,11 +2,24 @@
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
 generator client {
-  provider = "prisma-client-js"
-  output   = "../src/generated/prisma"
+  provider        = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
 }
 
 datasource db {
   provider = "sqlite"
   url      = env("DATABASE_URL")
+}
+
+model ThreadStatus {
+  id           String   @id
+  ownerId      String
+  lastActivity DateTime
+  asked        Boolean  @default(false)
+  isMonitoring Boolean  @default(true)
+
+  @@index([lastActivity])
+  @@index([isMonitoring])
+  @@index([asked])
+  @@map("thread_tracker")
 }
